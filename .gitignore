@@ -1,0 +1,24 @@
+# Environment variables
+.env
+
+# Credenciales sensibles
+config/rclone/*
+!config/rclone/.gitkeep
+config/gmail/*
+!config/gmail/.gitkeep
+config/gphotosdl/*
+!config/gphotosdl/.gitkeep
+
+# Data backups
+data/*
+!data/.gitkeep
+
+# Logs
+logs/*
+!logs/.gitkeep
+
+# Docker volumes
+.docker/
+
+# Docker compose override (solo para dev/testing)
+docker-compose.override.yml

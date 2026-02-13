@@ -1,0 +1,42 @@
+FROM python:3.11-slim
+
+# Metadata
+LABEL maintainer="DevOps Backup Engineer"
+LABEL description="Gmail backup container with GYB (Got Your Back) + rclone"
+
+# Instalar dependencias del sistema
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    unzip \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Instalar rclone
+RUN curl -O https://downloads.rclone.org/rclone-current-linux-amd64.zip && \
+    unzip rclone-current-linux-amd64.zip && \
+    mv rclone-*-linux-amd64/rclone /usr/bin/ && \
+    chmod +x /usr/bin/rclone && \
+    rm -rf rclone-*
+
+# Instalar Got Your Back (GYB)
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir gyb
+
+# Crear usuario no-root
+RUN groupadd -g 1000 backup && \
+    useradd -u 1000 -g backup -m -s /bin/bash backup
+
+# Crear directorios de trabajo
+RUN mkdir -p /config/gmail /config/rclone /data/gmail /logs /scripts && \
+    chown -R backup:backup /config /data /logs
+
+USER backup
+
+WORKDIR /data/gmail
+
+# Healthcheck
+HEALTHCHECK --interval=5m --timeout=30s --start-period=10s --retries=3 \
+    CMD gyb --version || exit 1
+
+ENTRYPOINT ["/bin/sh", "/scripts/backup-gmail.sh"]

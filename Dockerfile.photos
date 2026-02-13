@@ -1,0 +1,49 @@
+FROM alpine:3.19
+
+# Metadata
+LABEL maintainer="DevOps Backup Engineer"
+LABEL description="Google Photos backup container with rclone + gphotosdl"
+
+# Instalar dependencias
+RUN apk add --no-cache \
+    ca-certificates \
+    curl \
+    chromium \
+    chromium-chromedriver \
+    bash \
+    tzdata
+
+# Instalar rclone
+RUN curl -O https://downloads.rclone.org/rclone-current-linux-amd64.zip && \
+    unzip rclone-current-linux-amd64.zip && \
+    mv rclone-*-linux-amd64/rclone /usr/bin/ && \
+    chmod +x /usr/bin/rclone && \
+    rm -rf rclone-*
+
+# Instalar gphotosdl
+RUN curl -L -o /usr/bin/gphotosdl \
+    "https://github.com/rclone/gphotosdl/releases/latest/download/gphotosdl-linux-amd64" && \
+    chmod +x /usr/bin/gphotosdl
+
+# Variables de entorno para Chromium
+ENV CHROME_BIN=/usr/bin/chromium-browser \
+    CHROME_PATH=/usr/lib/chromium/ \
+    CHROMIUM_FLAGS="--no-sandbox --disable-dev-shm-usage --headless"
+
+# Crear usuario no-root
+RUN addgroup -g 1000 backup && \
+    adduser -D -u 1000 -G backup backup
+
+# Crear directorios de trabajo
+RUN mkdir -p /config/rclone /config/gphotosdl /data/photos /logs /scripts && \
+    chown -R backup:backup /config /data /logs
+
+USER backup
+
+WORKDIR /data/photos
+
+# Healthcheck
+HEALTHCHECK --interval=5m --timeout=30s --start-period=10s --retries=3 \
+    CMD pgrep -f gphotosdl || exit 0
+
+ENTRYPOINT ["/bin/sh", "/scripts/backup-photos.sh"]

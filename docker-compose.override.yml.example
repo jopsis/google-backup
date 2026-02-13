@@ -1,0 +1,34 @@
+# docker-compose.override.yml.example
+#
+# Copiar a docker-compose.override.yml para development/testing
+# Este archivo permite sobreescribir configuraciones sin modificar docker-compose.yml
+#
+# Uso: cp docker-compose.override.yml.example docker-compose.override.yml
+
+version: '3.8'
+
+services:
+
+  # Ejemplo: Ejecutar backups con mayor frecuencia para testing
+  # scheduler:
+  #   labels:
+  #     # Cada 5 minutos en vez de diario
+  #     ofelia.job-run.drive-backup.schedule: "0 */5 * * * *"
+  #     ofelia.job-run.photos-backup.schedule: "0 */10 * * * *"
+  #     ofelia.job-run.gmail-backup.schedule: "0 */15 * * * *"
+
+  # Ejemplo: Cambiar log level a DEBUG
+  # drive-backup:
+  #   environment:
+  #     - RCLONE_LOG_LEVEL=DEBUG
+
+  # Ejemplo: Exponer puerto de gphotosdl para debugging
+  # photos-backup:
+  #   ports:
+  #     - "8282:8282"
+
+  # Ejemplo: Ejecutar con shell interactiva en vez de entrypoint
+  # gmail-backup:
+  #   entrypoint: ["/bin/bash"]
+  #   stdin_open: true
+  #   tty: true

@@ -1,0 +1,125 @@
+version: '3.8'
+
+services:
+
+  # ============================================================
+  # SCHEDULER - Ofelia orquesta los backups via cron
+  # ============================================================
+  scheduler:
+    image: mcuadros/ofelia:latest
+    container_name: backup-scheduler
+    restart: unless-stopped
+    depends_on:
+      - drive-backup
+      - photos-backup
+      - gmail-backup
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./logs:/logs
+    labels:
+      ofelia.enabled: "true"
+      # Job para Google Drive
+      ofelia.job-run.drive-backup.schedule: "${DRIVE_SCHEDULE:-0 0 2 * * *}"
+      ofelia.job-run.drive-backup.container: "drive-backup"
+      # Job para Google Photos
+      ofelia.job-run.photos-backup.schedule: "${PHOTOS_SCHEDULE:-0 0 3 * * *}"
+      ofelia.job-run.photos-backup.container: "photos-backup"
+      # Job para Gmail
+      ofelia.job-run.gmail-backup.schedule: "${GMAIL_SCHEDULE:-0 0 4 * * *}"
+      ofelia.job-run.gmail-backup.container: "gmail-backup"
+    networks:
+      - backup-network
+
+  # ============================================================
+  # GOOGLE DRIVE BACKUP
+  # ============================================================
+  drive-backup:
+    image: rclone/rclone:latest
+    container_name: drive-backup
+    restart: "no"
+    entrypoint: ["/bin/sh", "/scripts/backup-drive.sh"]
+    environment:
+      - GOOGLE_ACCOUNTS=${GOOGLE_ACCOUNTS}
+      - BACKUP_DESTINATIONS=${BACKUP_DESTINATIONS}
+      - RCLONE_LOG_LEVEL=${RCLONE_LOG_LEVEL:-INFO}
+      - RCLONE_TRANSFERS=${RCLONE_TRANSFERS:-4}
+      - RCLONE_CHECKERS=${RCLONE_CHECKERS:-8}
+      - RCLONE_BWLIMIT=${RCLONE_BWLIMIT:-0}
+      - RCLONE_CONF=/config/rclone/rclone.conf
+      - NTFY_URL=${NTFY_URL:-}
+      - NTFY_TOKEN=${NTFY_TOKEN:-}
+    volumes:
+      - ./config/rclone:/config/rclone
+      - ./data/drive:/data/drive
+      - ./logs:/logs
+      - ./scripts:/scripts:ro
+    networks:
+      - backup-network
+    labels:
+      ofelia.enabled: "true"
+
+  # ============================================================
+  # GOOGLE PHOTOS BACKUP
+  # ============================================================
+  photos-backup:
+    build:
+      context: .
+      dockerfile: Dockerfile.photos
+    container_name: photos-backup
+    restart: "no"
+    environment:
+      - GOOGLE_ACCOUNTS=${GOOGLE_ACCOUNTS}
+      - BACKUP_DESTINATIONS=${BACKUP_DESTINATIONS}
+      - RCLONE_LOG_LEVEL=${RCLONE_LOG_LEVEL:-INFO}
+      - RCLONE_TRANSFERS=${RCLONE_TRANSFERS:-4}
+      - RCLONE_CHECKERS=${RCLONE_CHECKERS:-8}
+      - RCLONE_BWLIMIT=${RCLONE_BWLIMIT:-0}
+      - RCLONE_CONF=/config/rclone/rclone.conf
+      - GPHOTOSDL_PORT=8282
+      - NTFY_URL=${NTFY_URL:-}
+      - NTFY_TOKEN=${NTFY_TOKEN:-}
+    volumes:
+      - ./config/rclone:/config/rclone
+      - ./config/gphotosdl:/config/gphotosdl
+      - ./data/photos:/data/photos
+      - ./logs:/logs
+      - ./scripts:/scripts:ro
+    networks:
+      - backup-network
+    labels:
+      ofelia.enabled: "true"
+
+  # ============================================================
+  # GMAIL BACKUP
+  # ============================================================
+  gmail-backup:
+    build:
+      context: .
+      dockerfile: Dockerfile.gmail
+    container_name: gmail-backup
+    restart: "no"
+    environment:
+      - GOOGLE_ACCOUNTS=${GOOGLE_ACCOUNTS}
+      - BACKUP_DESTINATIONS=${BACKUP_DESTINATIONS}
+      - RCLONE_LOG_LEVEL=${RCLONE_LOG_LEVEL:-INFO}
+      - RCLONE_TRANSFERS=${RCLONE_TRANSFERS:-4}
+      - RCLONE_CHECKERS=${RCLONE_CHECKERS:-8}
+      - RCLONE_BWLIMIT=${RCLONE_BWLIMIT:-0}
+      - RCLONE_CONF=/config/rclone/rclone.conf
+      - NTFY_URL=${NTFY_URL:-}
+      - NTFY_TOKEN=${NTFY_TOKEN:-}
+    volumes:
+      - ./config/rclone:/config/rclone
+      - ./config/gmail:/config/gmail
+      - ./data/gmail:/data/gmail
+      - ./logs:/logs
+      - ./scripts:/scripts:ro
+    networks:
+      - backup-network
+    labels:
+      ofelia.enabled: "true"
+
+networks:
+  backup-network:
+    name: backup-network
+    driver: bridge
