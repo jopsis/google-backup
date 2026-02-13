@@ -75,7 +75,93 @@ docker run --rm -it \
 # Seguir las instrucciones en pantalla para autorizar
 ```
 
-## 4. Construir y Arrancar
+## 4. Configurar Google Photos (gphotosdl)
+
+> **Importante:** Google elimino los scopes de lectura de la Library API en marzo 2025.
+> Ya no es posible usar la API oficial para backup. gphotosdl usa un headless browser
+> (Chromium) para descargar las fotos en calidad original desde la interfaz web.
+> Esto requiere cookies de sesion de Google.
+
+### 4.1 Crear directorio de cookies
+
+```bash
+mkdir -p config/gphotosdl/cookies
+```
+
+### 4.2 Obtener cookies de sesion de Google Photos
+
+gphotosdl necesita las cookies de tu sesion de Google Photos para autenticarse.
+Hay que exportarlas desde tu navegador.
+
+**Opcion A: Extension de navegador (recomendada)**
+
+1. Instala una extension para exportar cookies en formato Netscape:
+   - Chrome: [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc)
+   - Firefox: [cookies.txt](https://addons.mozilla.org/en-US/firefox/addon/cookies-txt/)
+
+2. Ve a [https://photos.google.com](https://photos.google.com) e inicia sesion con tu cuenta
+
+3. Usa la extension para exportar las cookies de la pagina
+
+4. Guarda el archivo como `config/gphotosdl/cookies/{cuenta}.txt`
+   (donde `{cuenta}` es la parte antes del @ de tu email, ej: `config/gphotosdl/cookies/tucuenta.txt`)
+
+**Opcion B: Manualmente desde DevTools**
+
+1. Abre [https://photos.google.com](https://photos.google.com) en tu navegador
+2. Abre DevTools (F12) > Application > Cookies
+3. Copia todas las cookies del dominio `photos.google.com` y `google.com`
+4. Guardalas en formato Netscape en `config/gphotosdl/cookies/{cuenta}.txt`
+
+### 4.3 Configurar remote de rclone para Photos
+
+No se necesita un remote especifico en rclone.conf para Google Photos.
+El script `backup-photos.sh` usa gphotosdl como proxy HTTP local (`http://localhost:8282`)
+y rclone descarga desde ahi con `:http:`.
+
+Solo necesitas tener configurado el **remote de destino** (pCloud), que ya configuraste en el paso 2.
+
+### 4.4 Verificar que funciona
+
+```bash
+# Construir la imagen de photos primero
+docker-compose build photos-backup
+
+# Ejecutar backup manual de prueba
+docker-compose run --rm photos-backup
+
+# Verificar logs
+tail -f logs/photos-*.log
+```
+
+### 4.5 Renovacion de cookies
+
+Las cookies de sesion de Google **expiran periodicamente** (normalmente cada 1-2 semanas).
+Cuando el backup de Photos falle, revisa los logs:
+
+```bash
+tail -20 logs/photos-*.log
+```
+
+Si ves errores de autenticacion, repite el paso 4.2 para exportar cookies frescas.
+
+> **Consejo:** Configura notificaciones via ntfy (variable NTFY_URL en .env) para recibir
+> alertas cuando el backup de Photos falle, asi puedes renovar las cookies a tiempo.
+
+### 4.6 Multi-cuenta
+
+Para cada cuenta de Google, repite el proceso:
+
+```bash
+# Para cuenta2
+mkdir -p config/gphotosdl/cookies
+# Exportar cookies de photos.google.com con la sesion de cuenta2
+# Guardar en config/gphotosdl/cookies/cuenta2.txt
+```
+
+---
+
+## 5. Construir y Arrancar
 
 ```bash
 # Construir imagenes
@@ -88,7 +174,7 @@ docker-compose up -d scheduler
 docker-compose ps
 ```
 
-## 5. Primer Backup Manual (Recomendado)
+## 6. Primer Backup Manual (Recomendado)
 
 Antes de confiar en el scheduler, ejecutar un backup manual para verificar configuracion:
 
@@ -103,7 +189,7 @@ tail -f logs/drive-*.log
 
 Si todo funciona bien, el scheduler ejecutara los backups automaticamente segun los horarios configurados.
 
-## 6. Verificacion
+## 7. Verificacion
 
 ```bash
 # Ver logs del scheduler
