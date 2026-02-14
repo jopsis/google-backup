@@ -68,8 +68,8 @@ docker run --rm -it \
   python:3.11-slim bash -c "\
     apt-get update -qq && apt-get install -y -qq curl xz-utils && \
     curl -L -o gyb.tar.xz https://github.com/GAM-team/got-your-back/releases/download/v1.95/gyb-1.95-linux-x86_64-glibc2.35.tar.xz && \
-    tar -xf gyb.tar.xz && chmod +x gyb && \
-    ./gyb --email tucuenta@gmail.com \
+    tar -xf gyb.tar.xz && chmod +x gyb/gyb && \
+    ./gyb/gyb --email tucuenta@gmail.com \
         --action quota \
         --local-folder /data \
         --config-folder /config"

@@ -24,9 +24,9 @@ RUN GYB_VERSION=1.95 && \
     curl -L -o gyb.tar.xz \
     "https://github.com/GAM-team/got-your-back/releases/download/v${GYB_VERSION}/gyb-${GYB_VERSION}-linux-x86_64-glibc2.35.tar.xz" && \
     tar -xf gyb.tar.xz && \
-    mv gyb /usr/local/bin/gyb && \
+    mv gyb/gyb /usr/local/bin/gyb && \
     chmod +x /usr/local/bin/gyb && \
-    rm -f gyb.tar.xz
+    rm -rf gyb.tar.xz gyb/
 
 # Crear usuario no-root
 RUN groupadd -g 1000 backup && \
