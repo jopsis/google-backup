@@ -66,13 +66,14 @@ docker run --rm -it \
   -v $(pwd)/config/gmail/tucuenta:/config \
   -v $(pwd)/data/gmail/tucuenta:/data \
   python:3.11-slim bash -c "\
-    pip install -q gyb && \
+    apt-get update -qq && apt-get install -y -qq git && \
+    pip install -q git+https://github.com/GAM-team/got-your-back.git && \
     gyb --email tucuenta@gmail.com \
         --action quota \
         --local-folder /data \
         --config-folder /config"
 
-# Seguir las instrucciones en pantalla para autorizar
+# Seguir las instrucciones en pantalla para autorizar OAuth
 ```
 
 ## 4. Configurar Google Photos (gphotosdl)
