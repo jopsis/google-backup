@@ -52,7 +52,9 @@ fi
 # Iniciar gphotosdl proxy en segundo plano
 log "Iniciando gphotosdl proxy en puerto $GPHOTOSDL_PORT" | tee -a "$LOG_FILE"
 
-gphotosdl -port "$GPHOTOSDL_PORT" -headless 2>&1 | tee -a "$LOG_FILE" &
+# gphotosdl usa -addr en lugar de -port
+# Formato: -addr localhost:8282
+gphotosdl -addr "localhost:${GPHOTOSDL_PORT}" 2>&1 | tee -a "$LOG_FILE" &
 GPHOTOSDL_PID=$!
 
 log "gphotosdl iniciado (PID: $GPHOTOSDL_PID)" | tee -a "$LOG_FILE"

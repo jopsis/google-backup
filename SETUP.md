@@ -82,38 +82,54 @@ docker run --rm -it \
 > **Importante:** Google elimino los scopes de lectura de la Library API en marzo 2025.
 > Ya no es posible usar la API oficial para backup. gphotosdl usa un headless browser
 > (Chromium) para descargar las fotos en calidad original desde la interfaz web.
-> Esto requiere cookies de sesion de Google.
 
-### 4.1 Crear directorio de cookies
+### 4.1 Login inicial con gphotosdl
+
+gphotosdl necesita hacer login a Google Photos la primera vez. Ejecuta el contenedor en modo interactivo:
 
 ```bash
-mkdir -p config/gphotosdl/cookies
+# Construir la imagen primero si no lo has hecho
+docker compose build photos-backup
+
+# Ejecutar login interactivo (abrirá un navegador)
+docker run --rm -it \
+  -v $(pwd)/config/gphotosdl:/root/.config/gphotosdl \
+  -e DISPLAY=$DISPLAY \
+  -v /tmp/.X11-unix:/tmp/.X11-unix \
+  --entrypoint /bin/sh \
+  backup-photos-backup -c "gphotosdl -login -show"
 ```
 
-### 4.2 Obtener cookies de sesion de Google Photos
+> **Nota:** El comando anterior requiere X11 forwarding. Si estás en un servidor sin GUI,
+> necesitarás hacer el login desde tu máquina local o usar VNC.
 
-gphotosdl necesita las cookies de tu sesion de Google Photos para autenticarse.
-Hay que exportarlas desde tu navegador.
+**Alternativa sin X11 (servidor remoto):**
 
-**Opcion A: Extension de navegador (recomendada)**
+Si no tienes GUI, puedes hacer el login manualmente exportando cookies de tu navegador:
 
-1. Instala una extension para exportar cookies en formato Netscape:
+1. En tu navegador local, ve a [https://photos.google.com](https://photos.google.com) y haz login
+2. Exporta las cookies usando una extensión:
    - Chrome: [Get cookies.txt LOCALLY](https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc)
    - Firefox: [cookies.txt](https://addons.mozilla.org/en-US/firefox/addon/cookies-txt/)
+3. Copia el archivo de cookies a `config/gphotosdl/` en el servidor
 
-2. Ve a [https://photos.google.com](https://photos.google.com) e inicia sesion con tu cuenta
+### 4.2 Verificar la sesión
 
-3. Usa la extension para exportar las cookies de la pagina
+Una vez autenticado, gphotosdl guarda la sesión en `config/gphotosdl/`. Verifica que funciona:
 
-4. Guarda el archivo como `config/gphotosdl/cookies/{cuenta}.txt`
-   (donde `{cuenta}` es la parte antes del @ de tu email, ej: `config/gphotosdl/cookies/tucuenta.txt`)
+```bash
+# Iniciar gphotosdl en modo servidor
+docker run --rm -it \
+  -v $(pwd)/config/gphotosdl:/root/.config/gphotosdl \
+  -p 8282:8282 \
+  --entrypoint /bin/sh \
+  backup-photos-backup -c "gphotosdl -addr 0.0.0.0:8282"
 
-**Opcion B: Manualmente desde DevTools**
+# En otra terminal, prueba que responde
+curl http://localhost:8282/
+```
 
-1. Abre [https://photos.google.com](https://photos.google.com) en tu navegador
-2. Abre DevTools (F12) > Application > Cookies
-3. Copia todas las cookies del dominio `photos.google.com` y `google.com`
-4. Guardalas en formato Netscape en `config/gphotosdl/cookies/{cuenta}.txt`
+Si ves un listado de fotos/álbumes, la autenticación funciona.
 
 ### 4.3 Configurar remote de rclone para Photos
 
@@ -126,40 +142,37 @@ Solo necesitas tener configurado el **remote de destino** (pCloud), que ya confi
 ### 4.4 Verificar que funciona
 
 ```bash
-# Construir la imagen de photos primero
-docker-compose build photos-backup
-
 # Ejecutar backup manual de prueba
-docker-compose run --rm photos-backup
+docker compose run --rm photos-backup
 
 # Verificar logs
 tail -f logs/photos-*.log
 ```
 
-### 4.5 Renovacion de cookies
+### 4.5 Renovacion de sesión
 
-Las cookies de sesion de Google **expiran periodicamente** (normalmente cada 1-2 semanas).
+La sesión de gphotosdl **expira periódicamente** (normalmente cada 1-2 semanas).
 Cuando el backup de Photos falle, revisa los logs:
 
 ```bash
 tail -20 logs/photos-*.log
 ```
 
-Si ves errores de autenticacion, repite el paso 4.2 para exportar cookies frescas.
+Si ves errores de autenticación, repite el paso 4.1 para hacer login nuevamente.
 
 > **Consejo:** Configura notificaciones via ntfy (variable NTFY_URL en .env) para recibir
-> alertas cuando el backup de Photos falle, asi puedes renovar las cookies a tiempo.
+> alertas cuando el backup de Photos falle, así puedes renovar la sesión a tiempo.
 
 ### 4.6 Multi-cuenta
 
-Para cada cuenta de Google, repite el proceso:
+**Limitación actual:** gphotosdl solo soporta una cuenta de Google a la vez en su configuración.
+Para hacer backup de múltiples cuentas, necesitarías:
 
-```bash
-# Para cuenta2
-mkdir -p config/gphotosdl/cookies
-# Exportar cookies de photos.google.com con la sesion de cuenta2
-# Guardar en config/gphotosdl/cookies/cuenta2.txt
-```
+1. Ejecutar instancias separadas de gphotosdl en puertos diferentes
+2. Tener directorios de configuración separados para cada cuenta
+
+Esto requiere modificar el docker-compose.yml para tener un servicio por cuenta.
+Por ahora, la implementación soporta una sola cuenta de Google Photos.
 
 ---
 
