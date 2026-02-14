@@ -19,9 +19,14 @@ RUN curl -O https://downloads.rclone.org/rclone-current-linux-amd64.zip && \
     chmod +x /usr/bin/rclone && \
     rm -rf rclone-*
 
-# Instalar Got Your Back (GYB) desde repositorio oficial
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir git+https://github.com/GAM-team/got-your-back.git
+# Instalar Got Your Back (GYB) - binario precompilado v1.95
+RUN GYB_VERSION=1.95 && \
+    curl -L -o gyb.tar.xz \
+    "https://github.com/GAM-team/got-your-back/releases/download/v${GYB_VERSION}/gyb-${GYB_VERSION}-linux-x86_64-glibc2.35.tar.xz" && \
+    tar -xf gyb.tar.xz && \
+    mv gyb /usr/local/bin/gyb && \
+    chmod +x /usr/local/bin/gyb && \
+    rm -f gyb.tar.xz
 
 # Crear usuario no-root
 RUN groupadd -g 1000 backup && \

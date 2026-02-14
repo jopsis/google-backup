@@ -8,6 +8,7 @@ LABEL description="Google Photos backup container with rclone + gphotosdl"
 RUN apk add --no-cache \
     ca-certificates \
     curl \
+    unzip \
     chromium \
     chromium-chromedriver \
     bash \
@@ -20,10 +21,13 @@ RUN curl -O https://downloads.rclone.org/rclone-current-linux-amd64.zip && \
     chmod +x /usr/bin/rclone && \
     rm -rf rclone-*
 
-# Instalar gphotosdl
-RUN curl -L -o /usr/bin/gphotosdl \
-    "https://github.com/rclone/gphotosdl/releases/latest/download/gphotosdl-linux-amd64" && \
-    chmod +x /usr/bin/gphotosdl
+# Instalar gphotosdl v0.0.2
+RUN curl -L -o gphotosdl.zip \
+    "https://github.com/rclone/gphotosdl/releases/download/v0.0.2/gphotosdl_Linux_x86_64.zip" && \
+    unzip gphotosdl.zip && \
+    mv gphotosdl /usr/bin/gphotosdl && \
+    chmod +x /usr/bin/gphotosdl && \
+    rm -f gphotosdl.zip
 
 # Variables de entorno para Chromium
 ENV CHROME_BIN=/usr/bin/chromium-browser \
